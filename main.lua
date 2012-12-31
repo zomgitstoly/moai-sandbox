@@ -177,30 +177,23 @@ end
 
 function makeBullet(targetX,targetY)
 	local startX,startY = player.body:getWorldCenter()
-	--print("start " .. startX .. " " .. startY)
 	local bullet = MOAIProp2D.new()
 	local angle = angle (startX,startY, targetX, targetY )
-	--print("angle " .. angle)
 	
 	local moveinX = math.cos(angle) * 10
 	local moveinY = math.sin(angle)  * 10
 	
-	--print(moveinX .. " " .. moveinY)
 
 	bullet:setDeck(spriteBullet)
 	layer:insertProp(bullet)
 	bullet:setLoc(startX,startY)
 	bullet:setRot (math.deg(angle))
-	--print(angle)
 
 	function bullet:moveBullet()
-		--MOAICoroutine.blockOnAction ( self:seekLoc ( targetX, targetY, timeTraveled, MOAIEaseType.LINEAR ))
 		local locX,locY = bullet:getLoc()
 		while checkIfOutside(locX,locY) do
 			locX,locY = bullet:getLoc()
 			self:setLoc(locX+moveinX,locY+moveinY)
-			--coroutine.yield()
-			--print(self:getLoc())
 			coroutine.yield()
 		end
 		layer:removeProp(self)
@@ -220,6 +213,14 @@ function handleKeyInput(key,down)
 	elseif key == 97 then
 		--print("pressing")
 		player.action.moveLeft = down		
+	end
+
+	if key == 32 and down and (player.ground or not player.doubleJumped) then
+		player.body:setLinearVelocity(player.body:getLinearVelocity(),0)
+		player.body:applyLinearImpulse(0,70)
+		if not player.onGround then
+			player.doubleJumped = true
+		end
 	end
 end
 
