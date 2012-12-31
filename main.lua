@@ -28,7 +28,7 @@ world:setDebugDrawFlags( MOAIBox2DWorld.DEBUG_DRAW_SHAPES + MOAIBox2DWorld.DEBUG
 layer = MOAILayer2D.new()
 layer:setViewport(viewport)
 layer:setBox2DWorld(world)
-MOAIGfxDevice.setClearColor(1,1,1,1)
+--MOAIGfxDevice.setClearColor(1,1,1,1)
 
 
 --Loading in smiley img so it stays in memory
@@ -40,13 +40,18 @@ sprite = MOAIGfxQuad2D.new()
 sprite:setTexture(texture)
 sprite:setRect(-5,-10, 5, 10)
 
+--Make a new quad for the bullet
+spriteBullet = MOAIGfxQuad2D.new()
+spriteBullet:setTexture("shot.png")
+spriteBullet:setRect(-5,-5,5,5)
+
 --setting up the font
 charCode = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _+-()[]{}|\/?.,<>!~`@#$%^&*\'":;'
 fontScale = screenHeight/stageHeight
 
 --setting up debug textbox, adding a new layer
 status = MOAITextBox.new()
-status:setRect( -160 * fontScale, -100 * fontScale, 160 * fontScale, 100 * fontScale )
+status:setRect( -150 * fontScale, -100 * fontScale, 150 * fontScale, 100 * fontScale )
 status:setScl( 1 / fontScale )
 status:setYFlip( true )
 status:setColor( 1, 1, 1 )
@@ -116,17 +121,28 @@ player.fixtures = {
 }
 player.fixtures[1]:setRestitution( 0 )
 player.fixtures[1]:setFriction( 0 )
---player.fixtures[2]:setSensor( true )
+player.fixtures[2]:setSensor( true )
 ---
 ---
 playerProp = MOAIProp2D.new()
 playerProp:setDeck(sprite)
-playerProp:setParent(player.body)
-layer:insertProp(playerProp)
+--playerProp:setParent(player.body)
+--layer:insertProp(playerProp)
 
 
 --player foot sensor
 function footSensorHandler( phase, fix_a, fix_b, arbiter )
+    if phase == MOAIBox2DArbiter.BEGIN then
+        player.currentContactCount = player.currentContactCount + 1
+        if fix_b:getBody().tag == 'platform' then
+            player.platform = fix_b:getBody()
+        end
+    elseif phase == MOAIBox2DArbiter.END then
+        player.currentContactCount = player.currentContactCount - 1
+        if fix_b:getBody().tag == 'platform' then
+            player.platform = nil
+        end
+    end	
     if player.currentContactCount == 0 then
         player.onGround = false
     else
@@ -137,11 +153,6 @@ end
 player.fixtures[2]:setCollisionHandler( footSensorHandler, MOAIBox2DArbiter.BEGIN + MOAIBox2DArbiter.END )
 ---
 ---
-
---Make a new quad for the bullet
-spriteBullet = MOAIGfxQuad2D.new()
-spriteBullet:setTexture("shot.png")
-spriteBullet:setRect(-32,-32,32,32)
 
 --Angle For the Shot to be Fired in
 function angle ( x1, y1, x2, y2 )
@@ -165,7 +176,7 @@ function checkIfOutside(locX,locY)
 end
 
 function makeBullet(targetX,targetY)
-	local startX,startY = player.prop:getLoc()
+	local startX,startY = player.body:getWorldCenter()
 	--print("start " .. startX .. " " .. startY)
 	local bullet = MOAIProp2D.new()
 	local angle = angle (startX,startY, targetX, targetY )
@@ -178,8 +189,8 @@ function makeBullet(targetX,targetY)
 
 	bullet:setDeck(spriteBullet)
 	layer:insertProp(bullet)
-	bullet:setLoc(player:getLoc())
-	bullet:setRot (  )
+	bullet:setLoc(startX,startY)
+	bullet:setRot (math.deg(angle))
 	--print(angle)
 
 	function bullet:moveBullet()
@@ -205,10 +216,10 @@ function handleKeyInput(key,down)
 	print(key)
 	if key == 100 then
 		--print("pressing")
-		player.action.moveRight = true
+		player.action.moveRight = down
 	elseif key == 97 then
 		--print("pressing")
-		player.action.moveLeft = true		
+		player.action.moveLeft = down		
 	end
 end
 
@@ -253,7 +264,7 @@ if MOAIInputMgr.device.pointer then
 		function(isMouseDown)
 			if(isMouseDown) then
 				print(layer:wndToWorld(MOAIInputMgr.device.pointer:getLoc() ))
-				--makeBullet(layer:wndToWorld(MOAIInputMgr.device.pointer:getLoc()))
+				makeBullet(layer:wndToWorld(MOAIInputMgr.device.pointer:getLoc()))
 			end
 		end		
 	)	
